@@ -4,6 +4,8 @@ const server = require('http').Server(app)
 const io = require('socket.io')(server)
 const { v4: uuidV4 } = require('uuid')
 
+let isAvailable = false;
+
 app.set('view engine', 'ejs')
 app.use(express.static('public'))
 
@@ -12,7 +14,7 @@ app.get('/', (req, res) => {
 })
 
 app.get('/:room', (req, res) => {
-    res.render('room', { roomId: req.params.room })
+    res.render('room', { roomId: req.params.room, isAvailable })
 })
 
 io.on('connection', socket => {
@@ -24,6 +26,11 @@ io.on('connection', socket => {
             socket.broadcast.to(roomId).emit('user-disconnected', userId)
         })
     })
+    
+    socket.on('availability-change', (availability) => {
+        isAvailable = availability;
+        socket.broadcast.emit('availability-updated', isAvailable);
+    });
 })
 
 server.listen(3000)
