@@ -74,3 +74,8 @@ function ring() {
     socket.emit('availability-change', true); // Notify that user wants to initiate a call
     // Add Additional logic here
 }
+
+socket.on('availability-updated', (isAvailable) => {
+    const ringButton = document.getElementById('ring-button');
+    ringButton.disabled = !isAvailable; // Enable/disable the button based on availability
+});
