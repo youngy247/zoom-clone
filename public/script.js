@@ -69,3 +69,8 @@ function addVideoStream(video, stream) {
     })
     videoGrid.append(video)
 }
+
+function ring() {
+    socket.emit('availability-change', true); // Notify that user wants to initiate a call
+    // Add Additional logic here
+}
