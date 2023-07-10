@@ -79,3 +79,10 @@ socket.on('availability-updated', (isAvailable) => {
     const ringButton = document.getElementById('ring-button');
     ringButton.disabled = !isAvailable; // Enable/disable the button based on availability
 });
+
+function endCall() {
+    myVideo.srcObject.getTracks().forEach(track => track.stop()); // Stop the local video stream
+    Object.values(peers).forEach(peer => peer.call.close()); // Close all active calls with other users
+    videoGrid.innerHTML = ''; // Clear the video grid
+    // Additional cleanup or logic can be added here if needed
+}
