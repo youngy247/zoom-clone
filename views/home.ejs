@@ -22,6 +22,12 @@
             border-radius: 4px;
             cursor: pointer;
         }
+
+        .button:disabled {
+        opacity: 0.5;
+        cursor: default;
+        }
+
     </style>
 </head>
 <body>
@@ -30,7 +36,11 @@
         <p>Click the button below to start a video call</p>
         <p>Activity Status: <%= isActive ? 'Active' : 'Inactive' %></p>
         <p>Availability Status: <%= isAvailable ? 'Active' : 'Inactive' %></p>
-        <button id="ring-button" class="button" onclick="ring()" <%= isAvailable ? '' : 'disabled' %>>Ring</button>
+        <% if (isActive && isAvailable) { %>
+            <button id="ring-button" class="button" onclick="ring()">Ring</button>
+        <% } else { %>
+            <button id="ring-button" class="button" disabled>Ring</button>
+        <% } %>
     </div>
 
     <script src="/socket.io/socket.io.js" defer></script>
