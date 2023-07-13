@@ -99,18 +99,18 @@ function authenticateToken(req, res, next) {
     });
   }
   
+  const roomId = uuidV4()
+  app.get('/', (req, res) => {
+    res.render('home', { roomId: roomId, isAvailable, isActive });
+  });
 
   // Protected admin route
 app.get('/admin', authenticateToken, (req, res) => {
     // The token is valid and the user is authenticated
     // Access the user information from req.user (decoded JWT payload)
-    res.render('admin', { username: req.user.username });
+    res.render('admin', { username: req.user.username, roomId: roomId });
   });
   
-
-app.get('/', (req, res) => {
-  res.render('home', { isAvailable, isActive: isActive});
-});
 
 app.get('/:room', (req, res) => {
     const { room } = req.params;
@@ -119,53 +119,54 @@ app.get('/:room', (req, res) => {
     res.render('room', { roomId: room, isAvailable, isAdmin: Boolean(isAdmin) });
   });
   
-
-io.on('connection', (socket) => {
-  if (!adminSocketId) {
-    adminSocketId = socket.id;
-    isAvailable = true;
-    socket.emit('availability-updated', isAvailable); // Notify admin about initial availability status
-  }
-
-  socket.on('join-room', (roomId, userId) => {
-    if (roomOccupied || !isAvailable) {
-      socket.emit('room-unavailable');
-      return;
-    }
-
-    socket.join(roomId);
-    socket.broadcast.to(roomId).emit('user-connected', userId);
-
-    socket.on('disconnect', () => {
-      socket.broadcast.to(roomId).emit('user-disconnected', userId);
+  
+    io.on('connection', (socket) => {
+      if (!adminSocketId) {
+        adminSocketId = socket.id;
+        isAvailable = true;
+        socket.emit('availability-updated', isAvailable); // Notify admin about initial availability status
+      }
+    
+      socket.on('join-room', (roomId, userId) => {
+        if (roomOccupied || !isAvailable) {
+          socket.emit('room-unavailable');
+          return;
+        }
+    
+        socket.join(roomId);
+        socket.broadcast.to(roomId).emit('user-connected', userId);
+    
+        socket.on('disconnect', () => {
+          socket.broadcast.to(roomId).emit('user-disconnected', userId);
+        });
+      });
+    
+      socket.on('availability-change', (availability) => {
+        if (socket.id === adminSocketId) {
+          isAvailable = availability;
+          isActive = availability;
+          io.emit('availability-updated', isAvailable); // Notify all clients about the availability status change
+        }
+      });
+    
+      socket.on('accept-call', () => {
+        if (socket.id === adminSocketId && !roomOccupied && isAvailable) {
+          roomOccupied = true;
+          socket.emit('call-accepted');
+          isAvailable = false; // Set availability to false when accepting a call
+          io.emit('availability-updated', isAvailable); // Notify all clients about the availability status change
+        }
+      });
+    
+      socket.on('end-call', () => {
+        if (roomOccupied) {
+          const roomId = Object.keys(socket.rooms)[1]; // Get the room ID
+          socket.broadcast.to(roomId).emit('user-disconnected', socket.id);
+          roomOccupied = false;
+        }
+      });
     });
-  });
-
-  socket.on('availability-change', (availability) => {
-    if (socket.id === adminSocketId) {
-      isAvailable = availability;
-      isActive = availability;
-      io.emit('availability-updated', isAvailable); // Notify all clients about the availability status change
-    }
-  });
-
-  socket.on('accept-call', () => {
-    if (socket.id === adminSocketId && !roomOccupied && isAvailable) {
-      roomOccupied = true;
-      socket.emit('call-accepted');
-      isAvailable = false; // Set availability to false when accepting a call
-      io.emit('availability-updated', isAvailable); // Notify all clients about the availability status change
-    }
-  });
-
-  socket.on('end-call', () => {
-    if (roomOccupied) {
-      const roomId = Object.keys(socket.rooms)[1]; // Get the room ID
-      socket.broadcast.to(roomId).emit('user-disconnected', socket.id);
-      roomOccupied = false;
-    }
-  });
-});
+  
 
 server.listen(3000, () => {
   console.log('Server started on port 3000');
