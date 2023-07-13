@@ -2,9 +2,19 @@ const socket = io('/');
 const videoGrid = document.getElementById('video-grid');
 // Check if the element with the ID 'ring-button' exists
 const ringButton = document.getElementById('ring-button');
+const acceptButton = document.getElementById('accept-button');
+const endButton = document.getElementById('end-call-button');
 if (ringButton) {
   // Add the event listener only if the element exists
   ringButton.addEventListener('click', ring);
+}
+if (acceptButton) {
+  // Add the event listener only if the element exists
+  acceptButton.addEventListener('click', acceptCall);
+}
+if (endButton) {
+  // Add the event listener only if the element exists
+  endButton.addEventListener('click', endCall);
 }
 
 const myPeer = new Peer(undefined, {
@@ -25,20 +35,18 @@ navigator.mediaDevices
     audio: true,
   })
   .then((stream) => {
-    addVideoStream(myVideo, stream);
-
+    addVideoStream(myVideo, stream)
     myPeer.on('call', (call) => {
       call.answer(stream);
       const video = document.createElement('video');
       call.on('stream', (userVideoStream) => {
         addVideoStream(video, userVideoStream);
+      }).catch((error) => {
+        console.error('Error accessing media devices:', error);
+        // Display an error message to the user
+        alert('Error accessing camera and microphone. Please grant permission to join the call.');
       });
-    })
-    .catch((error) => {
-      console.error('Error accessing media devices:', error);
-      // Display an error message to the user
-      alert('Error accessing camera and microphone. Please grant permission to join the call.');
-    });
+      })
 
     socket.on('user-connected', (userId) => {
       if (isRinging) {
@@ -132,7 +140,7 @@ function ring() {
   isRinging = true;
   const ringButton = document.getElementById('ring-button');
   ringButton.disabled = true; // Disable the ring button after clicking
-
+  videoGrid.style.display = 'grid';
   // Add animation or any visual indication of the ringing state
   ringButton.innerText = 'Ringing...';
 
