@@ -66,6 +66,9 @@ app.get('/login', (req, res) => {
         // Set a session or generate a JWT token here for further authentication/authorization
         const token = jwt.sign({ username: admin.username }, secretKey, { expiresIn: '3h' });
         
+        // Set the token as a cookie
+        res.cookie('token', token, { maxAge: 3 * 60 * 60 * 1000 }); // Expires in 3 hours
+
          // Send the token as the response
         res.status(200).json({ token });
       });
