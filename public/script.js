@@ -47,6 +47,11 @@ navigator.mediaDevices
         }
         delete peers[userId];
       }
+    })
+    .catch((error) => {
+      console.error('Error accessing media devices:', error);
+      // Display an error message to the user
+      alert('Error accessing camera and microphone. Please grant permission to join the call.');
     });
 
     socket.on('user-call-request', (userId) => {
