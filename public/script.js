@@ -1,88 +1,135 @@
-const socket = io('/')
-const videoGrid = document.getElementById('video-grid')
+const socket = io('/');
+const videoGrid = document.getElementById('video-grid');
 const myPeer = new Peer(undefined, {
-    host: '/',
-    port: '3001'
-})
-const myVideo = document.createElement('video')
-myVideo.muted = true
-const peers = {}
-navigator.mediaDevices.getUserMedia({
+  host: '/',
+  port: '3001',
+});
+const myVideo = document.createElement('video');
+myVideo.muted = true;
+const peers = {};
+let isRinging = false; // Flag to track if the user is ringing
+
+// Hide the video grid initially
+videoGrid.style.display = 'none';
+
+navigator.mediaDevices
+  .getUserMedia({
     video: true,
-    audio: true
-}).then(stream => {
-    addVideoStream(myVideo, stream)
+    audio: true,
+  })
+  .then((stream) => {
+    addVideoStream(myVideo, stream);
 
-    myPeer.on('call', call => {
-        call.answer(stream)
-        const video = document.createElement('video')
-        call.on('stream', userVideoStream => {
-            addVideoStream(video, userVideoStream)
-        })
-    })
+    myPeer.on('call', (call) => {
+      call.answer(stream);
+      const video = document.createElement('video');
+      call.on('stream', (userVideoStream) => {
+        addVideoStream(video, userVideoStream);
+      });
+    });
 
-    socket.on('user-connected', userId => {
-        connectToNewUser(userId, stream)
-    })
-})
-
-socket.on('user-disconnected', userId => {
-    if (peers[userId]) {
-      peers[userId].close();
-      if (peers[userId].videoElement) {
-        peers[userId].videoElement.remove();
+    socket.on('user-connected', (userId) => {
+      if (isRinging) {
+        // Ignore incoming calls if ringing
+        return;
       }
-      delete peers[userId];
-    }
-  });
-  
+      connectToNewUser(userId, stream);
+    });
 
-myPeer.on('open', id => {
-    socket.emit('join-room', ROOM_ID, id)
-})
+    socket.on('user-disconnected', (userId) => {
+      if (peers[userId]) {
+        const { call, videoElement } = peers[userId];
+        if (videoElement) {
+          videoElement.remove();
+        }
+        if (call) {
+          call.close();
+        }
+        delete peers[userId];
+      }
+    });
+
+    socket.on('room-unavailable', () => {
+      // Handle room unavailable scenario (display message or redirect)
+      console.log('Room is unavailable at the moment.');
+    });
+
+    socket.on('call-accepted', () => {
+      const ringButton = document.getElementById('ring-button');
+      ringButton.style.display = 'none'; // Hide the ring button
+      videoGrid.style.display = 'grid'; // Show the video grid
+    });
+
+    socket.on('availability-updated', (availability) => {
+      const ringButton = document.getElementById('ring-button');
+      ringButton.disabled = !availability; // Disable the ring button based on availability
+    });
+  });
+
+myPeer.on('open', (id) => {
+  socket.emit('join-room', ROOM_ID, id);
+});
 
 function connectToNewUser(userId, stream) {
-    const call = myPeer.call(userId, stream);
-    const video = document.createElement('video');
-  
-    call.on('stream', userVideoStream => {
-      addVideoStream(video, userVideoStream);
-    });
-  
-    call.on('close', () => {
-      video.remove();
-    });
+  const call = myPeer.call(userId, stream);
+  const video = document.createElement('video');
 
-    video.srcObject = stream;
-  
-    peers[userId] = {
-      call,
-      videoElement: video
-    };
-  }
-  
+  call.on('stream', (userVideoStream) => {
+    addVideoStream(video, userVideoStream);
+  });
+
+  call.on('close', () => {
+    video.remove();
+    delete peers[userId];
+  });
+
+  peers[userId] = {
+    call,
+    videoElement: video,
+  };
+
+  video.srcObject = stream;
+  video.addEventListener('loadedmetadata', () => {
+    video.play();
+  });
+  videoGrid.append(video);
+}
 
 function addVideoStream(video, stream) {
-    video.srcObject = stream
-    video.addEventListener('loadedmetadata', () => {
-        video.play()
-    })
-    videoGrid.append(video)
+  video.srcObject = stream;
+  video.addEventListener('loadedmetadata', () => {
+    video.play();
+  });
+  videoGrid.append(video);
 }
 
 function ring() {
-    socket.emit('availability-change', true); // Notify that user wants to initiate a call
-    // Add Additional logic here
+  isRinging = true;
+  const ringButton = document.getElementById('ring-button');
+  ringButton.disabled = true; // Disable the ring button after clicking
+
+  // Add animation or any visual indication of the ringing state
+  ringButton.innerText = 'Ringing...';
+
+  socket.emit('availability-change', true);
 }
 
-socket.on('availability-updated', (isAvailable) => {
-    const ringButton = document.getElementById('ring-button');
-    ringButton.disabled = !isAvailable; // Enable/disable the button based on availability
-});
+function acceptCall() {
+  const ringButton = document.getElementById('ring-button');
+  ringButton.style.display = 'none'; // Hide the ring button
+  videoGrid.style.display = 'grid'; // Show the video grid
+
+  socket.emit('accept-call');
+}
 
 function endCall() {
-    myVideo.srcObject.getTracks().forEach(track => track.stop()); // Stop the local video stream
-    Object.values(peers).forEach(peer => peer.call.close()); // Close all active calls with other users
-    videoGrid.innerHTML = ''; // Clear the video grid
-    // Additional cleanup or logic can be added here if needed
+  myVideo.srcObject.getTracks().forEach((track) => track.stop());
+  Object.values(peers).forEach((peer) => {
+    peer.call.close();
+    if (peer.videoElement) {
+      peer.videoElement.remove();
+    }
+  });
+  videoGrid.innerHTML = '';
+  socket.emit('end-call');
 }
