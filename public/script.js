@@ -1,5 +1,12 @@
 const socket = io('/');
 const videoGrid = document.getElementById('video-grid');
+// Check if the element with the ID 'ring-button' exists
+const ringButton = document.getElementById('ring-button');
+if (ringButton) {
+  // Add the event listener only if the element exists
+  ringButton.addEventListener('click', ring);
+}
+
 const myPeer = new Peer(undefined, {
   host: '/',
   port: '3001',
@@ -26,6 +33,11 @@ navigator.mediaDevices
       call.on('stream', (userVideoStream) => {
         addVideoStream(video, userVideoStream);
       });
+    })
+    .catch((error) => {
+      console.error('Error accessing media devices:', error);
+      // Display an error message to the user
+      alert('Error accessing camera and microphone. Please grant permission to join the call.');
     });
 
     socket.on('user-connected', (userId) => {
@@ -48,11 +60,7 @@ navigator.mediaDevices
         delete peers[userId];
       }
     })
-    .catch((error) => {
-      console.error('Error accessing media devices:', error);
-      // Display an error message to the user
-      alert('Error accessing camera and microphone. Please grant permission to join the call.');
-    });
+    
 
     socket.on('user-call-request', (userId) => {
         // Display a notification or alert to the admin about the incoming call request
@@ -120,6 +128,7 @@ function addVideoStream(video, stream) {
 }
 
 function ring() {
+  console.log('ring')
   isRinging = true;
   const ringButton = document.getElementById('ring-button');
   ringButton.disabled = true; // Disable the ring button after clicking
@@ -131,8 +140,7 @@ function ring() {
 }
 
 function acceptCall() {
-  const ringButton = document.getElementById('ring-button');
-  ringButton.style.display = 'none'; // Hide the ring button
+  console.log('accept call')
   videoGrid.style.display = 'grid'; // Show the video grid
 
   socket.emit('accept-call');
