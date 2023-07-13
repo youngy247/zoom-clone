@@ -49,6 +49,12 @@ navigator.mediaDevices
       }
     });
 
+    socket.on('user-call-request', (userId) => {
+        // Display a notification or alert to the admin about the incoming call request
+        alert('Incoming call request from user:', userId);
+      });
+      
+
     socket.on('room-unavailable', () => {
       // Handle room unavailable scenario (display message or redirect)
       console.log('Room is unavailable at the moment.');
@@ -71,12 +77,17 @@ myPeer.on('open', (id) => {
 });
 
 function connectToNewUser(userId, stream) {
-  const call = myPeer.call(userId, stream);
-  const video = document.createElement('video');
-
-  call.on('stream', (userVideoStream) => {
-    addVideoStream(video, userVideoStream);
-  });
+    const call = myPeer.call(userId, stream);
+    const video = document.createElement('video');
+    const videoPreview = document.createElement('video');
+    videoPreview.muted = true;
+  
+    call.on('stream', (userVideoStream) => {
+      addVideoStream(video, userVideoStream);
+      videoPreview.remove(); // Remove the video preview once the user's video stream is received
+    });
+  
+    addVideoStream(videoPreview, stream);
 
   call.on('close', () => {
     video.remove();
