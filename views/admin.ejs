@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="../public/script.js" defer></script>
+    <title>Admin Page</title>
+    <style>
+        #video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 300px);
+            grid-auto-rows: 300px;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .notification {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .notification.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="video-grid"></div>
+
+    <p id="username">Hello <%= username %></p>
+        <button id="accept-button" class="button" onclick="acceptCall()">Accept</button>
+
+
+    <button id="end-call-button" class="button" onclick="endCall()">End Call</button>
+
+    
+</body>
+</html>
